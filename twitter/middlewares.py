@@ -2,12 +2,12 @@
 #
 # See documentation in:
 # https://docs.scrapy.org/en/latest/topics/spider-middleware.html
-
+import json
 from scrapy import signals
-
+from scrapy.http import TextResponse
 # useful for handling different item types with a single interface
 from itemadapter import is_item, ItemAdapter
-
+from twitter.twapi import get_api
 
 class TwitterSpiderMiddleware:
     # Not all methods need to be defined. If a method is not defined,
@@ -61,6 +61,9 @@ class TwitterDownloaderMiddleware:
     # scrapy acts as if the downloader middleware does not modify the
     # passed objects.
 
+    def __init__(self):
+        self.api = get_api({})
+
     @classmethod
     def from_crawler(cls, crawler):
         # This method is used by Scrapy to create your spiders.
@@ -78,7 +81,15 @@ class TwitterDownloaderMiddleware:
         # - or return a Request object
         # - or raise IgnoreRequest: process_exception() methods of
         #   installed downloader middleware will be called
-        return None
+        params = self.api.get_params(
+                     {
+                     "id": request.body,
+                     "trim_user": False,
+                     "include_my_retweet": True,
+                     }
+                 )
+        data = self.api.req_twitter(url="https://api.twitter.com/1.1/statuses/show.json", params=params)
+        return TextResponse(url=request.url, body=json.dumps(data), encoding='utf8')
 
     def process_response(self, request, response, spider):
         # Called with the response returned from the downloader.
